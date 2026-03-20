@@ -7,3 +7,5 @@ This project explores Google Trends search data for global hip-hop artist Drake 
 - `Coursework1_XXXXX.Rmd`
 - `Coursework1_XXXXX.html`
 
+## Live page
+[View the project webpage here](https://natboateng11-cmd.github.io/time-series/)

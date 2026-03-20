@@ -1,0 +1,115 @@
+---
+title: "Coursework 1: Forecasting Google Trends Interest in Drake"
+subtitle: "MTH6139 Time Series"
+author: "Nathaniel Aweseh-Boateng"
+date: "20 March 2026"
+output: 
+  html_document:
+    toc: true
+    toc_float: true
+    theme: spacelab 
+    highlight: tango
+---
+ 
+```{r, echo=FALSE}
+# This code will display the QMUL logo at the top right of the page
+# Do not change this code
+htmltools::img(src = knitr::image_uri("images/QMlogo.png"),
+               alt = 'logo',
+               style = 'position:absolute; top:0; right:0; padding:10px; width:20%;')
+```
+# Introduction
+
+In this project, I explore a time series of Google Trends search interest for the hip-hop artist Drake in Great Britain. The aim of this project, is to, in the manner of a strategist or promoter within his team preparing for a rollout or tour, observe the behaviour of this series through time, before using Meta's Prophet forecasting system to then forecast future trends in his search interest.
+
+The first chart produced suggests that the series is quite irregular, as we have most observations in this period at a fairly low level, but with several clear, sharp spikes. At first glance, no seasonal pattern is easily deductible from the plot of this data alone.
+
+# Preparing the Data
+
+```{r}
+drake_data <- read.csv("data/time_series_GB_20210320-1217_20260320-1217.csv")
+
+drake_prophet_data <- data.frame(
+  ds = as.Date(drake_data$Time),
+  y = drake_data$Drake
+)
+
+head(drake_prophet_data)
+```
+We observe that this dataset contains 61 observations taken monthly from March 2021 to March 2026.
+
+# Initial Plot of The Series
+
+```{r}
+plot(
+  drake_prophet_data$ds,
+  drake_prophet_data$y,
+  type = "l",
+  main = "Google Trends Interest in Drake with Fitted Trend Line",
+  xlab = "Date",
+  ylab = "Search Interest"
+)
+
+abline(lm(y ~ ds, data = drake_prophet_data), lty = 2)
+```
+
+We get a simple fitted trend line, which shows a slight upward movement over time, but we can see that the series is dominated by irregular spikes, so that overall upward movement has not been smooth.
+
+# Prophet Forecast
+
+I then fit Meta's Prophet forecasting model to the series and produced forecasts for the next 12 months. The forecast output suggested a downward movement in predicted search interest over that 12 month period.
+
+This forecast should however be treated with caution. The plot shows that the predicted values fall in a very sharp manner, eventually becoming negative, which is difficult to interpret when it comes to Google Trends search interest. This suggests that, while the model has indeed produced a forecast, the default fit of this model may not describe the future behaviour of this series in a realistic manner.
+
+```{r}
+library(prophet)
+
+drake_prophet_model <- prophet(drake_prophet_data)
+
+drake_future_dates <- make_future_dataframe(drake_prophet_model, periods = 12)
+
+drake_forecast <- predict(drake_prophet_model, drake_future_dates)
+
+plot(drake_prophet_model, drake_forecast)
+```
+
+# Forecast Values
+
+To inspect the forecast more closely, I looked at the predicted values for the 12 future periods. This makes it easier to see the size and direction of the forecast, rather than relying only on the plot.
+```{r}
+tail(drake_forecast[, c("ds", "yhat", "yhat_lower", "yhat_upper")], 12)
+```
+
+The forecast values show a downward path over the 12 month horizon. They also become negative towards the end of the forecast period, which is one reason why I concluded that the result should be interpreted cautiously.
+
+# Comparing With A Second Forecast
+
+As such, I elected to I fit a second Prophet model with weekly seasonality switched on. I chose to do this as the default model output stated that weekly seasonality had been disabled.
+
+The second forecast produced a far more realistic result when compared with the first. Here, the forecast values remained positive and within a more plausible range. For this reason, I consider the second forecast to be more useful for interpreting possible future search interest in Drake.
+
+```{r}
+drake_prophet_model_weekly <- prophet(
+  drake_prophet_data,
+  weekly.seasonality = TRUE
+)
+
+drake_future_dates_weekly <- make_future_dataframe(
+  drake_prophet_model_weekly,
+  periods = 12
+)
+
+drake_forecast_weekly <- predict(
+  drake_prophet_model_weekly,
+  drake_future_dates_weekly
+)
+
+plot(drake_prophet_model_weekly, drake_forecast_weekly)
+```
+```{r}
+tail(drake_forecast_weekly[, c("ds", "yhat", "yhat_lower", "yhat_upper")], 12)
+```
+
+# Conclusion
+
+This project sought to explore Google Trends search interest for Drake in Great Britain using Meta’s Prophet forecasting system. Considering the initial observations made from the data, as well as the results from both forecasts, we can conclude that it is essential to check model output, and consider the impact of model settings. No doubt, the irregular nature of the series and lack of obvious seasonality influenced our initial choices, but we see that the second forecast that assumed weekly seasonality in fact produced a more plausible forecast. A crucial lesson, then, to take, is that model output should always be carefully checked.
